@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto">
+  <div id="pload" class="loading">Loading profile...</div>
+  <div id="pcont" class="hidden">
+    <div class="card mb16">
+      <div class="fc" style="flex-direction:column;gap:14px;padding:10px 0">
+        <div style="width:80px;height:80px;border-radius:50%;background:var(--ge);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:white;box-shadow:var(--glow)" id="p-avatar">?</div>
+        <div style="text-align:center">
+          <div style="font-size:22px;font-weight:800;color:#e0e7ff" id="p-name"></div>
+          <div class="ts tm mt8" id="p-email"></div>
+          <div class="badge badge-p mt8" id="p-level"></div>
+        </div>
+        <div class="flex g8" style="align-items:center">
+          <input class="form-input" id="edit-name" placeholder="Update name..." style="max-width:220px">
+          <button class="btn btn-primary btn-sm" onclick="updateName()">Update</button>
+        </div>
+      </div>
+    </div>
+    <div class="card mb16">
+      <div class="card-title">Level Progress</div>
+      <div class="fb mb8"><span style="font-size:14px;font-weight:700;color:#e0e7ff" id="p-level-name"></span><span class="ts tm" id="p-xp-info"></span></div>
+      <div class="xp-bar-wrap mb8"><div class="xp-bar-fill" id="p-xpbar" style="width:0%"></div></div>
+      <div class="ts tm" id="p-next"></div>
+    </div>
+    <div class="card-grid mb16">
+      <div class="stat-card"><div class="stat-label">Total XP</div><div class="stat-value" id="p-xp">0</div></div>
+      <div class="stat-card" style="--sg:linear-gradient(135deg,#fbbf24,#f472b6)"><div class="stat-label">Best Streak</div><div class="stat-value" id="p-streak">0</div></div>
+      <div class="stat-card" style="--sg:linear-gradient(135deg,#34d399,#06b6d4)"><div class="stat-label">Total Hours</div><div class="stat-value" id="p-hours">0h</div></div>
+      <div class="stat-card" style="--sg:linear-gradient(135deg,#f472b6,#8b5cf6)"><div class="stat-label">Topics Done</div><div class="stat-value" id="p-topics">0</div></div>
+    </div>
+    <div class="card mb16">
+      <div class="card-title">Earned Badges</div>
+      <div id="p-badges"><div class="ts tm">No badges yet!</div></div>
+    </div>
+    <div class="card" style="border-color:rgba(248,113,113,.2)">
+      <div class="card-title" style="color:var(--coral)">Account</div>
+      <div class="ts tm mb8">Member since: <span id="p-joined" style="color:#a78bfa;font-family:var(--fm)"></span></div>
+      <button class="btn btn-sm" onclick="if(confirm('Reset tour?')){localStorage.removeItem('fq-tour-done');alert('Tour reset!')}">Reset Tour Guide</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const BI={first_topic:{n:'First Step',i:'🎯'},streak_3:{n:'Hat-Trick',i:'🔥'},streak_7:{n:'Week Warrior',i:'⚡'},streak_30:{n:'Monthly Master',i:'💎'},xp_500:{n:'XP Hunter',i:'⭐'},xp_2000:{n:'XP Legend',i:'🏆'},quiz_ace:{n:'Quiz Ace',i:'🧠'},speed_demon:{n:'Speed Demon',i:'💨'},subject_5:{n:'Multi-Tasker',i:'📚'},night_owl:{n:'Night Owl',i:'🦉'},ai_user:{n:'AI Scholar',i:'🤖'},daily_champ:{n:'Daily Champion',i:'🎖️'},speed_quiz_5:{n:'Speed Racer',i:'🏎️'}};
+async function load(){
+  const d=await api('GET','/api/profile');
+  document.getElementById('pload').classList.add('hidden');
+  document.getElementById('pcont').classList.remove('hidden');
+  const u=d.user,s=d.stats,li=d.level_info;
+  document.getElementById('p-avatar').textContent=u.name?.[0]?.toUpperCase()||'?';
+  document.getElementById('p-name').textContent=u.name||'';
+  document.getElementById('p-email').textContent=u.email||'';
+  document.getElementById('edit-name').value=u.name||'';
+  document.getElementById('p-level').textContent=`Lv${li.level} — ${li.name}`;
+  document.getElementById('p-level-name').textContent=li.name;
+  document.getElementById('p-xp-info').textContent=`${li.xp} XP`;
+  document.getElementById('p-xpbar').style.width=li.progress+'%';
+  document.getElementById('p-next').textContent=`${li.xp_needed} XP to next level`;
+  document.getElementById('p-xp').textContent=li.xp;
+  document.getElementById('p-streak').textContent=d.streak_best||0;
+  document.getElementById('p-hours').textContent=d.total_hours+'h';
+  document.getElementById('p-topics').textContent=d.topic_count;
+  document.getElementById('p-joined').textContent=new Date(u.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+  if(d.badges.length){document.getElementById('p-badges').innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:10px">`+d.badges.map(b=>{const info=BI[b]||{n:b,i:'🏅'};return`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px"><span style="font-size:18px">${info.i}</span><span style="font-size:12px;font-weight:600;color:#e0e7ff">${info.n}</span></div>`}).join('')+`</div>`}
+}
+async function updateName(){const name=document.getElementById('edit-name').value.trim();if(!name)return;const r=await api('POST','/api/profile/update',{name});if(r.success){document.getElementById('p-name').textContent=name;document.getElementById('p-avatar').textContent=name[0].toUpperCase();document.getElementById('sidebar-name').textContent=name;showXP(0)}}
+document.addEventListener('DOMContentLoaded',load);
+</script>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Register — FocusQuest AI{% endblock %}
+{% block body %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🌌</div>
+      <div class="auth-logo-text">FocusQuest AI</div>
+    </div>
+    <h1 class="auth-title">Start Your Quest</h1>
+    <p class="auth-subtitle">Create account and begin leveling up</p>
+    <div class="auth-error" id="err"></div>
+    <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="name" type="text" placeholder="Your Name"></div>
+    <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="email" type="email" placeholder="your@email.com"></div>
+    <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="pw" type="password" placeholder="Min 6 characters"></div>
+    <button class="btn btn-primary btn-block btn-lg" id="btn" onclick="doReg()">Create Account →</button>
+    <div class="auth-footer">Have account? <a href="/login">Sign in</a></div>
+  </div>
+</div>
+<script>
+async function doReg(){
+  const btn=document.getElementById('btn'),err=document.getElementById('err');
+  const name=document.getElementById('name').value.trim(),email=document.getElementById('email').value.trim(),pw=document.getElementById('pw').value;
+  if(!name||!email||!pw){err.textContent='Fill all fields';err.style.display='block';return}
+  btn.textContent='Creating...';btn.disabled=true;err.style.display='none';
+  const d=await fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password:pw})}).then(r=>r.json());
+  if(d.error){err.textContent=d.error;err.style.display='block';btn.textContent='Create Account →';btn.disabled=false}
+  else location.href='/dashboard';
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter')doReg()});
+</script>
+{% endblock %}

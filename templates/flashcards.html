@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Flash Cards{% endblock %}
+{% block page_title %}Flash Cards 🃏{% endblock %}
+{% block content %}
+<div style="max-width:600px;margin:0 auto">
+  <div class="card mb16">
+    <div class="card-title">Generate Flashcards</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Topic</label><input class="form-input" id="fc-topic" placeholder="e.g. Binary Search"></div>
+      <div class="form-group" style="margin-bottom:0"><label class="form-label">Subject</label><input class="form-input" id="fc-subject" placeholder="e.g. DSA"></div>
+    </div>
+    <div class="flex g8 mt12">
+      <select class="form-input" id="fc-count" style="max-width:120px"><option value="5">5 cards</option><option value="10" selected>10 cards</option><option value="15">15 cards</option></select>
+      <button class="btn btn-primary f1" id="fc-btn" onclick="generateCards()">🃏 Generate Cards</button>
+    </div>
+  </div>
+  <div id="fc-empty" class="card fc" style="flex-direction:column;gap:12px;padding:48px;text-align:center">
+    <div style="font-size:48px">🃏</div>
+    <div style="font-size:16px;font-weight:700">AI Flash Cards</div>
+    <div class="ts tm">Enter a topic and AI will generate smart flashcards for you!</div>
+  </div>
+  <div id="fc-study" class="hidden">
+    <div class="fb mb16">
+      <div><span class="ts tm" id="fc-progress">Card 1 of 10</span></div>
+      <div class="flex g8"><button class="btn btn-sm" onclick="prevCard()">← Prev</button><button class="btn btn-sm" onclick="nextCard()">Next →</button></div>
+    </div>
+    <div class="flashcard-container mb16" onclick="flipCard()">
+      <div class="flashcard" id="flashcard">
+        <div class="flashcard-front"><div class="flashcard-label">Question</div><div class="flashcard-text" id="fc-front"></div><div class="ts tm mt16">Click to flip 👆</div></div>
+        <div class="flashcard-back"><div class="flashcard-label">Answer</div><div class="flashcard-text" id="fc-back"></div></div>
+      </div>
+    </div>
+    <div class="fb">
+      <div class="ts tm" id="fc-score">Score: 0 / 0</div>
+      <div class="flex g8">
+        <button class="btn btn-danger btn-sm" onclick="markCard(false)">✗ Hard</button>
+        <button class="btn btn-green btn-sm" onclick="markCard(true)">✓ Easy</button>
+      </div>
+    </div>
+    <div class="xp-bar-wrap mt12"><div class="xp-bar-fill" id="fc-prog-bar" style="width:0%"></div></div>
+  </div>
+  <div id="fc-complete" class="hidden card" style="text-align:center;padding:40px">
+    <div style="font-size:48px;margin-bottom:12px">🎉</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:8px">Session Complete!</div>
+    <div class="ts tm mb16" id="fc-final-score"></div>
+    <button class="btn btn-primary" onclick="restartCards()">Study Again</button>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let cards=[],cardIdx=0,correct=0,total=0,flipped=false;
+async function generateCards(){
+  const topic=document.getElementById('fc-topic').value.trim(),subject=document.getElementById('fc-subject').value.trim(),count=document.getElementById('fc-count').value;
+  if(!topic)return alert('Enter a topic!');
+  const btn=document.getElementById('fc-btn');btn.textContent='🤖 Generating...';btn.disabled=true;
+  const d=await api('POST','/api/flashcards/generate',{topic,subject,count:parseInt(count)});
+  btn.textContent='🃏 Generate Cards';btn.disabled=false;
+  cards=d.flashcards;cardIdx=0;correct=0;total=0;flipped=false;
+  document.getElementById('fc-empty').classList.add('hidden');
+  document.getElementById('fc-complete').classList.add('hidden');
+  document.getElementById('fc-study').classList.remove('hidden');
+  renderCard();
+}
+function renderCard(){
+  if(cardIdx>=cards.length){showComplete();return}
+  const c=cards[cardIdx];
+  document.getElementById('fc-front').textContent=c.front;
+  document.getElementById('fc-back').textContent=c.back;
+  document.getElementById('fc-progress').textContent=`Card ${cardIdx+1} of ${cards.length}`;
+  document.getElementById('fc-prog-bar').style.width=(cardIdx/cards.length*100)+'%';
+  document.getElementById('flashcard').classList.remove('flipped');
+  flipped=false;
+}
+function flipCard(){document.getElementById('flashcard').classList.toggle('flipped');flipped=!flipped}
+function markCard(easy){total++;if(easy)correct++;cardIdx++;renderCard();showXP(5)}
+function prevCard(){if(cardIdx>0){cardIdx--;renderCard()}}
+function nextCard(){cardIdx++;renderCard()}
+function showComplete(){
+  document.getElementById('fc-study').classList.add('hidden');
+  document.getElementById('fc-complete').classList.remove('hidden');
+  document.getElementById('fc-final-score').textContent=`${correct}/${total} correct · ${Math.round(correct/Math.max(total,1)*100)}% accuracy`;
+  showXP(correct*10);
+}
+function restartCards(){cardIdx=0;correct=0;total=0;document.getElementById('fc-complete').classList.add('hidden');document.getElementById('fc-study').classList.remove('hidden');renderCard()}
+</script>
+{% endblock %}

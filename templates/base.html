@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}FocusQuest AI{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css">
+{% block head %}{% endblock %}
+</head>
+<body>
+{% block body %}
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">⚡</div>
+      <div>
+        <div class="logo-text">FocusQuest AI</div>
+        <div class="logo-sub">Study · Level Up · Win</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section">Study</div>
+      <a href="/dashboard" class="nav-item {% if request.path=='/dashboard' %}active{% endif %}">
+        <div class="nav-icon">🏠</div><span class="nav-label">Dashboard</span>
+      </a>
+      <a href="/daily" class="nav-item {% if request.path=='/daily' %}active{% endif %}">
+        <div class="nav-icon">📅</div><span class="nav-label">Daily Study</span>
+      </a>
+      <a href="/study-ai" class="nav-item {% if request.path=='/study-ai' %}active{% endif %}">
+        <div class="nav-icon">🤖</div><span class="nav-label">Study AI</span>
+        <span class="nav-badge">NEW</span>
+      </a>
+      <a href="/exam" class="nav-item {% if request.path=='/exam' %}active{% endif %}">
+        <div class="nav-icon">📋</div><span class="nav-label">Exam Mode</span>
+      </a>
+      <div class="nav-section">Play</div>
+      <a href="/games" class="nav-item {% if request.path=='/games' %}active{% endif %}">
+        <div class="nav-icon">🎮</div><span class="nav-label">Games Hub</span>
+        <span class="nav-badge">🔥</span>
+      </a>
+      <a href="/flashcards" class="nav-item {% if request.path=='/flashcards' %}active{% endif %}">
+        <div class="nav-icon">🃏</div><span class="nav-label">Flash Cards</span>
+      </a>
+      <a href="/speed-quiz" class="nav-item {% if request.path=='/speed-quiz' %}active{% endif %}">
+        <div class="nav-icon">⚡</div><span class="nav-label">Speed Quiz</span>
+      </a>
+      <div class="nav-section">Progress</div>
+      <a href="/notes" class="nav-item {% if request.path=='/notes' %}active{% endif %}">
+        <div class="nav-icon">📝</div><span class="nav-label">Notes</span>
+      </a>
+      <a href="/analytics" class="nav-item {% if request.path=='/analytics' %}active{% endif %}">
+        <div class="nav-icon">📊</div><span class="nav-label">Analytics</span>
+      </a>
+      <a href="/coach" class="nav-item {% if request.path=='/coach' %}active{% endif %}">
+        <div class="nav-icon">💬</div><span class="nav-label">AI Coach</span>
+      </a>
+      <a href="/badges" class="nav-item {% if request.path=='/badges' %}active{% endif %}">
+        <div class="nav-icon">🏅</div><span class="nav-label">Badges</span>
+      </a>
+      <a href="/leaderboard" class="nav-item {% if request.path=='/leaderboard' %}active{% endif %}">
+        <div class="nav-icon">🏆</div><span class="nav-label">Leaderboard</span>
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="user-chip" onclick="location.href='/profile'">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-name" id="sidebar-name">Loading...</div>
+          <div class="user-level" id="sidebar-level">Level 1</div>
+        </div>
+        <span style="font-size:12px;color:var(--t2)">›</span>
+      </div>
+      <div class="theme-row">
+        <span class="theme-label">Theme</span>
+        <button onclick="toggleTheme()" id="theme-btn" class="theme-btn">🌙 Dark</button>
+      </div>
+      <button class="logout-btn" onclick="logout()">Sign out</button>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <header class="topbar">
+      <button class="menu-btn" onclick="toggleSidebar()" id="menu-btn">☰</button>
+      <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
+      <div class="topbar-right">
+        <div class="tooltip-wrap">
+          <div class="xp-pill">⚡ <span id="topbar-xp">0</span> XP</div>
+          <div class="tooltip">Total experience points</div>
+        </div>
+        <div class="tooltip-wrap">
+          <div class="streak-pill">🔥 <span id="topbar-streak">0</span> days</div>
+          <div class="tooltip">Study streak — don't break it!</div>
+        </div>
+        <div class="tooltip-wrap">
+          <button class="profile-btn" onclick="location.href='/profile'">👤</button>
+          <div class="tooltip">My Profile</div>
+        </div>
+      </div>
+    </header>
+    <main class="main-content">{% block content %}{% endblock %}</main>
+  </div>
+</div>
+
+<div class="xp-toast" id="xp-toast"></div>
+<div class="badge-toast" id="badge-toast"></div>
+
+<div class="tour-overlay hidden" id="tour-overlay">
+  <div class="tour-card">
+    <span class="tour-icon" id="tour-icon">⚡</span>
+    <div class="tour-title" id="tour-title"></div>
+    <div class="tour-desc" id="tour-desc"></div>
+    <div class="tour-steps" id="tour-steps"></div>
+    <div class="tour-btns">
+      <button class="btn btn-sm" onclick="endTour()">Skip</button>
+      <button class="btn btn-primary btn-sm" id="tour-next" onclick="nextTour()">Next →</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+<script src="/static/js/main.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+<div id="dload" class="loading">Loading your universe...</div>
+<div id="dcont" class="hidden">
+  <div class="quote-card" id="quote"></div>
+  <div class="card mb16">
+    <div class="fb" style="flex-wrap:wrap;gap:14px">
+      <div><div class="ts tm mb8" style="font-weight:700;text-transform:uppercase;letter-spacing:.5px">Your Level</div>
+        <div style="font-size:26px;font-weight:800;letter-spacing:-.5px" id="lname"></div>
+        <div class="ts tm mt8" id="linfo"></div>
+      </div>
+      <div style="flex:1;min-width:160px">
+        <div class="fb mb8"><span class="ts tm">Lv <span id="lnum">1</span></span><span class="ts tm">Lv <span id="lnext">2</span></span></div>
+        <div class="xp-bar-wrap"><div class="xp-bar-fill" id="xpbar" style="width:0%"></div></div>
+        <div class="ts tm mt8" id="lxp"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card-grid">
+    <div class="stat-card" style="--sg:linear-gradient(135deg,#fbbf24,#f472b6)"><div class="stat-label">Day Streak</div><div class="stat-value" id="s-streak">0</div><div class="stat-sub">days 🔥</div></div>
+    <div class="stat-card" style="--sg:linear-gradient(135deg,#34d399,#06b6d4)"><div class="stat-label">Total Hours</div><div class="stat-value" id="s-hours">0h</div><div class="stat-sub">studied</div></div>
+    <div class="stat-card"><div class="stat-label">Total XP</div><div class="stat-value" id="s-xp">0</div><div class="stat-sub">experience ⚡</div></div>
+    <div class="stat-card" style="--sg:linear-gradient(135deg,#f87171,#fbbf24)"><div class="stat-label">Exams Ahead</div><div class="stat-value" id="s-exams">0</div><div class="stat-sub">upcoming 📋</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px" class="d2col">
+    <div class="card"><div class="card-title">This Week</div><div class="streak-row" id="sdots"></div><div class="ts tm" id="shint"></div></div>
+    <div class="card"><div class="card-title">Upcoming Exams</div><div id="exam-dash"><div class="ts tm">No exams. <a href="/exam" style="color:#a78bfa">Add one →</a></div></div></div>
+  </div>
+  <div class="card mb16">
+    <div class="fb mb16"><div class="card-title" style="margin-bottom:0">Today's Topics</div><a href="/daily" class="btn btn-primary btn-sm">+ Add Topic</a></div>
+    <div id="today-topics"><div class="ts tm">No topics today. <a href="/daily" style="color:#a78bfa">Add one →</a></div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="d2col">
+    <div class="card"><div class="card-title">Subject Progress</div><div id="subj-prog"><div class="ts tm">No subjects yet.</div></div></div>
+    <div class="card"><div class="card-title">Quick Actions</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <a href="/study-ai" class="btn" style="flex-direction:column;gap:4px;padding:14px;text-align:center;border-color:rgba(139,92,246,.3)"><span style="font-size:20px">🤖</span><span style="font-size:11px">Study AI</span></a>
+        <a href="/games" class="btn" style="flex-direction:column;gap:4px;padding:14px;text-align:center;border-color:rgba(251,191,36,.3)"><span style="font-size:20px">🎮</span><span style="font-size:11px">Games</span></a>
+        <a href="/flashcards" class="btn" style="flex-direction:column;gap:4px;padding:14px;text-align:center;border-color:rgba(52,211,153,.3)"><span style="font-size:20px">🃏</span><span style="font-size:11px">Flashcards</span></a>
+        <a href="/speed-quiz" class="btn" style="flex-direction:column;gap:4px;padding:14px;text-align:center;border-color:rgba(248,113,113,.3)"><span style="font-size:20px">⚡</span><span style="font-size:11px">Speed Quiz</span></a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function load(){
+  const d=await api('GET','/api/dashboard');
+  document.getElementById('dload').classList.add('hidden');
+  document.getElementById('dcont').classList.remove('hidden');
+  const li=d.level_info,s=d.stats;
+  const q=getRandomQuote();
+  const qel=document.getElementById('quote');
+  qel.innerHTML=`<div class="quote-text">"${q.text}"</div><div class="quote-author">— ${q.author}</div>`;
+  document.getElementById('lname').innerHTML=`<span class="gt">${li.name}</span>`;
+  document.getElementById('lnum').textContent=li.level;
+  document.getElementById('lnext').textContent=li.level+1;
+  document.getElementById('linfo').textContent=`${li.xp} XP · ${li.xp_needed} to next level`;
+  document.getElementById('xpbar').style.width=li.progress+'%';
+  document.getElementById('lxp').textContent=li.progress+'% to next level';
+  document.getElementById('s-streak').textContent=s.streak||0;
+  document.getElementById('s-hours').textContent=((s.total_minutes||0)/60).toFixed(1)+'h';
+  document.getElementById('s-xp').textContent=s.xp||0;
+  document.getElementById('s-exams').textContent=d.exams.length;
+  const sd=document.getElementById('sdots');
+  const DAYS=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  sd.innerHTML=d.streak_days.map(day=>{const dt=new Date(day.date+'T00:00:00');const isT=day.date===new Date().toISOString().slice(0,10);return`<div class="streak-dot ${isT?'today':day.studied?'done':''}">${DAYS[dt.getDay()]}</div>`}).join('');
+  document.getElementById('shint').textContent=s.streak?`${s.streak}-day streak! Keep going!`:'Study today to start your streak!';
+  if(d.exams.length){document.getElementById('exam-dash').innerHTML=d.exams.map(e=>{const days=daysUntil(e.exam_date);const cls=days<=3?'badge-r':days<=7?'badge-y':'badge-g';return`<div class="fb" style="padding:7px 0;border-bottom:1px solid var(--border)"><span style="font-size:13px;font-weight:500">${e.name}</span><span class="badge ${cls}">${days}d</span></div>`}).join('')+`<a href="/exam" style="display:block;margin-top:8px;font-size:12px;color:#a78bfa">Manage →</a>`}
+  if(d.today_topics.length){document.getElementById('today-topics').innerHTML=d.today_topics.map(t=>`<div class="topic-item ${t.completed?'completed':''}" onclick="${!t.completed?`location.href='/timer/${t.id}'`:''}"><div class="topic-check ${t.completed?'done':''}">${t.completed?'✓':''}</div><div class="f1"><div class="topic-name">${t.name}</div><div class="topic-meta" style="color:${t.subject_color}">${t.subject_name} · ${t.required_minutes}min</div></div>${t.completed?'<span class="badge badge-g">Done ✓</span>':'<span class="badge badge-p">Study →</span>'}</div>`).join('')}
+  if(d.subjects.length){document.getElementById('subj-prog').innerHTML=d.subjects.map(s=>`<div class="prog-row"><div class="cdot" style="background:${s.color}"></div><div class="prog-label">${s.name}</div><div class="prog-bg"><div class="prog-fill" style="background:${s.color};width:50%"></div></div></div>`).join('')}
+}
+document.addEventListener('DOMContentLoaded',load);
+</script>
+<style>@media(max-width:600px){.d2col{grid-template-columns:1fr!important}}</style>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Games{% endblock %}
+{% block page_title %}Games & Challenges{% endblock %}
+{% block content %}
+<div class="fb mb20" style="flex-wrap:wrap;gap:12px">
+  <div><div style="font-size:20px;font-weight:700">Level Up Your Learning! 🎮</div><div class="ts tm mt8">Complete challenges to earn bonus XP and badges</div></div>
+</div>
+<div class="card-grid" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))">
+  <!-- Daily Challenge -->
+  <div class="game-card" style="--gc:linear-gradient(135deg,#fbbf24,#f472b6)" onclick="location.href='/daily'">
+    <span class="game-icon">🎯</span>
+    <div class="game-title">Daily Challenge</div>
+    <div class="game-desc">Complete today's featured topic and earn bonus XP! New challenge every day.</div>
+    <div class="game-xp">+100 BONUS XP</div>
+    <div class="flex g8 mt16" style="align-items:center">
+      <div id="dc-status" class="ts tm">Loading...</div>
+      <button class="btn btn-gold btn-sm" onclick="event.stopPropagation();claimChallenge()">Claim Bonus</button>
+    </div>
+  </div>
+  <!-- Speed Quiz -->
+  <div class="game-card" style="--gc:linear-gradient(135deg,#f87171,#fbbf24)" onclick="location.href='/speed-quiz'">
+    <span class="game-icon">⚡</span>
+    <div class="game-title">Speed Quiz</div>
+    <div class="game-desc">Answer as many questions as possible in 30 seconds! Test your knowledge under pressure.</div>
+    <div class="game-xp">UP TO +100 XP</div>
+    <button class="btn btn-danger btn-sm mt16">Play Now →</button>
+  </div>
+  <!-- Flashcards -->
+  <div class="game-card" style="--gc:linear-gradient(135deg,#34d399,#06b6d4)" onclick="location.href='/flashcards'">
+    <span class="game-icon">🃏</span>
+    <div class="game-title">Flash Cards</div>
+    <div class="game-desc">AI generates smart flashcards for your topic. Flip, learn, and remember faster!</div>
+    <div class="game-xp">+10 XP PER CARD</div>
+    <button class="btn btn-green btn-sm mt16">Study Now →</button>
+  </div>
+  <!-- Weekly Tournament -->
+  <div class="game-card" style="--gc:linear-gradient(135deg,#8b5cf6,#3b82f6)" onclick="location.href='/leaderboard'">
+    <span class="game-icon">🏆</span>
+    <div class="game-title">Weekly Tournament</div>
+    <div class="game-desc">Compete with all students! Most study hours this week wins 500 bonus XP!</div>
+    <div class="game-xp">+500 XP FOR TOP 3</div>
+    <div id="tournament-info" class="ts tm mt8">Loading standings...</div>
+    <button class="btn btn-primary btn-sm mt16">View Leaderboard →</button>
+  </div>
+  <!-- Streak Battle -->
+  <div class="game-card" style="--gc:linear-gradient(135deg,#f472b6,#8b5cf6)">
+    <span class="game-icon">🔥</span>
+    <div class="game-title">Streak Battle</div>
+    <div class="game-desc">Share your streak link with friends! Whoever maintains streak longer wins bragging rights!</div>
+    <div class="game-xp">+20 XP PER STREAK DAY</div>
+    <div id="streak-info" class="ts tm mt8">Your streak: loading...</div>
+    <button class="btn btn-sm mt16" style="border-color:rgba(244,114,182,.3);color:var(--pink)" onclick="shareStreak()">Share Streak 🔗</button>
+  </div>
+  <!-- Coming Soon -->
+  <div class="game-card" style="--gc:linear-gradient(135deg,#6b7280,#9ca3af);opacity:.7">
+    <span class="game-icon">🎲</span>
+    <div class="game-title">More Games Coming!</div>
+    <div class="game-desc">Memory Match, Study Bingo, and Group Challenge modes are being developed!</div>
+    <div class="game-xp">COMING SOON</div>
+    <div class="badge badge-p mt16">In Development</div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadGames(){
+  const dc=await api('GET','/api/games/daily-challenge');
+  document.getElementById('dc-status').textContent=dc.completed_today>0?`✅ ${dc.completed_today} topics done today!`:`📋 ${dc.challenge_topic?dc.challenge_topic.name:'Add topics to get started'}`;
+  const t=await api('GET','/api/games/tournament');
+  if(t.tournament?.length){const top=t.tournament[0];document.getElementById('tournament-info').textContent=`👑 Leading: ${top.name} — ${(top.study_mins/60).toFixed(1)}h this week`}
+  const me=await api('GET','/api/auth/me');
+  document.getElementById('streak-info').textContent=`Your streak: ${me.streak} days 🔥`;
+}
+async function claimChallenge(){
+  const r=await api('POST','/api/games/complete-challenge');
+  if(r.success){showXP(100,'BONUS XP');alert('🎯 Daily Challenge bonus claimed! +100 XP!')}
+}
+function shareStreak(){
+  const text=`I'm on a study streak with FocusQuest AI! 🔥\nCheck it out: focusquest2026.pythonanywhere.com`;
+  if(navigator.share){navigator.share({title:'FocusQuest AI',text,url:'https://focusquest2026.pythonanywhere.com'})}
+  else{navigator.clipboard.writeText(text);alert('Link copied! Share with friends 🔗')}
+}
+document.addEventListener('DOMContentLoaded',loadGames);
+</script>
+{% endblock %}

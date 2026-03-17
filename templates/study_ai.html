@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block title %}Study AI{% endblock %}
+{% block page_title %}Study AI{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:360px 1fr;gap:20px;align-items:start" class="sai-grid">
+  <div>
+    <div class="card mb16">
+      <div class="card-title"><span class="card-title-dot" style="--cd:var(--c5)"></span>Upload Your Syllabus</div>
+
+      <!-- Drop Zone -->
+      <div class="drop-zone" id="dropzone"
+        onclick="document.getElementById('fileInput').click()"
+        ondragover="dzOver(event)" ondragleave="dzLeave()" ondrop="dzDrop(event)">
+        <span class="drop-zone-icon">📂</span>
+        <div class="drop-zone-text">Drag & drop any file here</div>
+        <div class="drop-zone-sub">PDF · Images · TXT · Word docs · Any text file</div>
+        <input type="file" id="fileInput" style="display:none"
+          accept=".txt,.text,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.csv,.md"
+          onchange="fileSelected(this)">
+      </div>
+
+      <!-- File preview -->
+      <div id="file-preview" class="hidden"></div>
+
+      <!-- Google Drive link -->
+      <div style="margin:12px 0;text-align:center;font-size:11px;color:var(--t2)">— or paste Google Drive / any link —</div>
+      <div class="form-group">
+        <input class="form-input" id="drive-link" placeholder="https://drive.google.com/... or any URL">
+      </div>
+
+      <div style="margin:10px 0;text-align:center;font-size:11px;color:var(--t2)">— or type/paste text directly —</div>
+      <div class="form-group">
+        <textarea class="form-input" id="syl-text" rows="5" style="resize:vertical"
+          placeholder="Paste syllabus text here...&#10;Unit 1: OOP Concepts&#10;Unit 2: Arrays&#10;Unit 3: Trees"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Title</label>
+        <input class="form-input" id="syl-title" placeholder="e.g. Java Exam Prep" value="Study Material">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Subject (optional)</label>
+        <select class="form-input" id="syl-subj"><option value="">— Don't add to calendar —</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Exam Date (optional)</label>
+        <input type="date" class="form-input" id="syl-date">
+      </div>
+      <button class="btn btn-purple btn-block" id="genbtn" onclick="generateMaterial()" style="margin-bottom:8px">
+        🤖 Generate AI Study Material
+      </button>
+      <div style="text-align:center;font-size:11px;color:var(--t2)">Powered by Google Gemini AI ✨</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="card-title-dot" style="--cd:var(--c6)"></span>Previous Materials</div>
+      <div id="prev-list"><div class="ts tm">No materials yet.</div></div>
+    </div>
+  </div>
+
+  <div>
+    <div id="sai-empty" class="card fc" style="flex-direction:column;gap:16px;padding:56px;text-align:center">
+      <div style="font-size:56px">🤖</div>
+      <div style="font-size:19px;font-weight:700;color:var(--t0)">AI Study Assistant</div>
+      <div style="font-size:13px;color:var(--t1);max-width:360px;line-height:1.7">Upload your syllabus — PDF, image, text file or just paste it. AI will instantly generate everything you need!</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:320px">
+        <div class="card" style="padding:14px;text-align:center;border-color:rgba(99,102,241,.2)"><div style="font-size:22px;margin-bottom:5px">📝</div><div style="font-size:12px;font-weight:600">Short Notes</div><div style="font-size:10px;color:var(--t2)">Quick revision bullets</div></div>
+        <div class="card" style="padding:14px;text-align:center;border-color:rgba(139,92,246,.2)"><div style="font-size:22px;margin-bottom:5px">📖</div><div style="font-size:12px;font-weight:600">Long Notes</div><div style="font-size:10px;color:var(--t2)">Detailed explanations</div></div>
+        <div class="card" style="padding:14px;text-align:center;border-color:rgba(16,185,129,.2)"><div style="font-size:22px;margin-bottom:5px">❓</div><div style="font-size:12px;font-weight:600">Practice Q</div><div style="font-size:10px;color:var(--t2)">5 practice questions</div></div>
+        <div class="card" style="padding:14px;text-align:center;border-color:rgba(245,158,11,.2)"><div style="font-size:22px;margin-bottom:5px">🧠</div><div style="font-size:12px;font-weight:600">AI Quiz</div><div style="font-size:10px;color:var(--t2)">MCQ with answers</div></div>
+      </div>
+    </div>
+
+    <div id="sai-result" class="hidden">
+      <div class="fb mb16" style="flex-wrap:wrap;gap:10px">
+        <div><div style="font-size:17px;font-weight:700" id="sai-title"></div><div id="sai-badge" class="mt8"></div></div>
+        <button class="btn btn-sm" onclick="document.getElementById('sai-result').classList.add('hidden');document.getElementById('sai-empty').classList.remove('hidden')">← New</button>
+      </div>
+      <div class="flex g8 mb16" style="flex-wrap:wrap">
+        <button class="material-tab active" onclick="showTab('short',this)">📝 Short Notes</button>
+        <button class="material-tab" onclick="showTab('long',this)">📖 Long Notes</button>
+        <button class="material-tab" onclick="showTab('practice',this)">❓ Practice Q</button>
+        <button class="material-tab" onclick="showTab('quiz',this)">🧠 Quiz</button>
+        <button class="material-tab" onclick="showTab('schedule',this)">📅 Schedule</button>
+      </div>
+      <div id="tab-short" class="material-content"></div>
+      <div id="tab-long" class="material-content hidden"></div>
+      <div id="tab-practice" class="material-content hidden"></div>
+      <div id="tab-quiz" class="hidden"></div>
+      <div id="tab-schedule" class="hidden"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let quizData=[],qIdx=0,qScore=0,answered=false,selectedFile=null;
+
+// Drop zone
+function dzOver(e){e.preventDefault();document.getElementById('dropzone').classList.add('dragover')}
+function dzLeave(){document.getElementById('dropzone').classList.remove('dragover')}
+function dzDrop(e){e.preventDefault();dzLeave();const f=e.dataTransfer.files[0];if(f)handleFile(f)}
+function fileSelected(inp){if(inp.files[0])handleFile(inp.files[0])}
+
+function handleFile(f){
+  selectedFile=f;
+  const isImage=f.type.startsWith('image/');
+  const isPDF=f.type==='application/pdf';
+  const size=f.size<1024?f.size+'B':f.size<1048576?(f.size/1024).toFixed(1)+'KB':(f.size/1048576).toFixed(1)+'MB';
+
+  // Show preview
+  const icons={'application/pdf':'📄','text/plain':'📝','application/msword':'📝','image/png':'🖼️','image/jpeg':'🖼️','image/webp':'🖼️'};
+  const icon=icons[f.type]||'📁';
+  document.getElementById('file-preview').innerHTML=`
+    <div class="file-preview"><span class="file-icon">${icon}</span>
+    <div class="f1"><div class="file-name">${f.name}</div><div class="file-size">${size} · ${f.type||'file'}</div></div>
+    <button class="file-remove" onclick="clearFile()">✕</button></div>`;
+  document.getElementById('file-preview').classList.remove('hidden');
+
+  if(isImage||isPDF){
+    document.getElementById('syl-text').placeholder='File selected! AI will analyze it directly 🤖';
+    document.getElementById('syl-text').value='';
+  } else {
+    // Read text file
+    const r=new FileReader();
+    r.onload=e=>{document.getElementById('syl-text').value=e.target.result};
+    r.readAsText(f);
+  }
+}
+
+function clearFile(){
+  selectedFile=null;
+  document.getElementById('file-preview').classList.add('hidden');
+  document.getElementById('file-preview').innerHTML='';
+  document.getElementById('fileInput').value='';
+  document.getElementById('syl-text').placeholder='Paste syllabus text here...';
+}
+
+// Load subjects
+async function loadSubjs(){
+  const ss=await api('GET','/api/subjects');
+  document.getElementById('syl-subj').innerHTML=
+    '<option value="">— Don\'t add to calendar —</option>'+
+    ss.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+async function generateMaterial(){
+  let syl=document.getElementById('syl-text').value.trim();
+  const driveLink=document.getElementById('drive-link').value.trim();
+  const title=document.getElementById('syl-title').value.trim()||'Study Material';
+  const sid=document.getElementById('syl-subj').value||null;
+  const edate=document.getElementById('syl-date').value||null;
+
+  // Handle different input types
+  if(!syl && !selectedFile && !driveLink){
+    return alert('Please upload a file, paste a link, or type your syllabus!');
+  }
+
+  const btn=document.getElementById('genbtn');
+  btn.textContent='🤖 AI Analyzing...';btn.disabled=true;
+
+  // If file is image/PDF — convert to base64 and add note
+  if(selectedFile){
+    const isImage=selectedFile.type.startsWith('image/');
+    const isPDF=selectedFile.type==='application/pdf';
+    if(isImage||isPDF){
+      const b64=await fileToBase64(selectedFile);
+      syl=`[FILE: ${selectedFile.name}]\nPlease analyze this ${isPDF?'PDF':'image'} and extract the syllabus/topics from it.\n\n[BASE64_DATA: ${b64.substring(0,500)}...]`;
+    }
+  }
+
+  // If drive link
+  if(driveLink && !syl){
+    syl=`Content from: ${driveLink}\nPlease generate study material for this document/link.`;
+  }
+
+  const d=await api('POST','/api/study-ai/generate',{
+    syllabus:syl,title,
+    subject_id:sid?parseInt(sid):null,
+    exam_date:edate
+  });
+
+  btn.textContent='🤖 Generate AI Study Material';btn.disabled=false;
+  if(d.error)return alert(d.error);
+  showResult(d);loadPrev();
+}
+
+function fileToBase64(file){
+  return new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(file)});
+}
+
+function showResult(d){
+  document.getElementById('sai-empty').classList.add('hidden');
+  document.getElementById('sai-result').classList.remove('hidden');
+  document.getElementById('sai-title').textContent=d.title||'Study Material';
+  document.getElementById('sai-badge').innerHTML=d.ai_powered?
+    '<span class="badge badge-g">⚡ Gemini AI Generated</span>':
+    '<span class="badge badge-y">Basic Mode</span>';
+  document.getElementById('tab-short').textContent=d.short_notes||'No short notes.';
+  document.getElementById('tab-long').textContent=d.long_notes||'No long notes.';
+  document.getElementById('tab-practice').textContent=d.practice_questions||'No practice questions.';
+
+  // Quiz
+  let qp=[];try{qp=JSON.parse(d.quiz_questions||'[]')}catch{}
+  if(qp.length){quizData=qp;qIdx=0;qScore=0;document.getElementById('tab-quiz').innerHTML='<div id="ai-quiz-box"></div>';renderAIQ()}
+  else document.getElementById('tab-quiz').innerHTML='<div class="card ts tm">No quiz generated.</div>';
+
+  // Schedule
+  let sp=[];try{sp=JSON.parse(d.schedule||'[]')}catch{}
+  if(sp.length){
+    document.getElementById('tab-schedule').innerHTML=
+      `<div class="day-schedule">${sp.map(s=>`<div class="day-card"><div class="ts tm mb8" style="font-weight:600">Day ${s.day}</div><div class="day-num">${s.day}</div><div class="day-topic">${s.topic}</div><div class="ts tm">${s.minutes}min</div></div>`).join('')}</div>`;
+  } else document.getElementById('tab-schedule').innerHTML='<div class="card ts tm">No schedule.</div>';
+}
+
+function renderAIQ(){
+  if(qIdx>=quizData.length){
+    document.getElementById('ai-quiz-box').innerHTML=`<div class="card" style="text-align:center;padding:28px"><div style="font-size:36px;margin-bottom:10px">🎯</div><div style="font-size:16px;font-weight:700">Quiz Complete!</div><div class="ts tm mt8">Score: ${qScore}/${quizData.length} · ${Math.round(qScore/quizData.length*100)}%</div><button class="btn btn-primary mt16" onclick="qIdx=0;qScore=0;renderAIQ()">Retake</button></div>`;
+    showXP(qScore*10);return;
+  }
+  const q=quizData[qIdx];answered=false;
+  document.getElementById('ai-quiz-box').innerHTML=`<div class="card"><div class="ts tm mb8">Q${qIdx+1} of ${quizData.length}</div><div style="font-size:15px;font-weight:600;margin-bottom:14px;line-height:1.5">${q.question}</div>${q.options.map((o,i)=>`<button class="quiz-option" onclick="ansAIQ(${i},${q.correct_index})" id="aiq${i}">${String.fromCharCode(65+i)}. ${o}</button>`).join('')}${q.explanation?`<div id="exp" class="hidden ts tm mt8" style="padding:10px;background:var(--bg2);border-radius:8px">💡 ${q.explanation}</div>`:''}</div>`;
+}
+function ansAIQ(c,correct){
+  if(answered)return;answered=true;
+  document.querySelectorAll('.quiz-option').forEach(b=>b.disabled=true);
+  document.getElementById(`aiq${c}`).classList.add(c===correct?'correct':'wrong');
+  if(c!==correct)document.getElementById(`aiq${correct}`).classList.add('correct');
+  if(c===correct)qScore++;
+  const exp=document.getElementById('exp');if(exp)exp.classList.remove('hidden');
+  setTimeout(()=>{qIdx++;renderAIQ()},1100);
+}
+
+function showTab(name,btn){
+  ['short','long','practice','quiz','schedule'].forEach(t=>document.getElementById('tab-'+t).classList.add('hidden'));
+  document.getElementById('tab-'+name).classList.remove('hidden');
+  document.querySelectorAll('.material-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+async function loadPrev(){
+  const mats=await api('GET','/api/study-ai/list');
+  const el=document.getElementById('prev-list');
+  if(!mats.length){el.innerHTML='<div class="ts tm">No materials yet.</div>';return}
+  el.innerHTML=mats.map(m=>`<div class="fb" style="padding:8px 0;border-bottom:1px solid var(--b)"><div><div style="font-size:13px;font-weight:500">${m.title}</div><div class="ts tm">${new Date(m.created_at).toLocaleDateString('en-IN')}</div></div><div class="flex g8"><button class="btn btn-sm" onclick="loadMaterial(${m.id})">View</button><button class="btn btn-sm btn-danger" onclick="delMaterial(${m.id})">✕</button></div></div>`).join('');
+}
+async function loadMaterial(id){const d=await api('GET',`/api/study-ai/${id}`);showResult(d);window.scrollTo({top:0,behavior:'smooth'})}
+async function delMaterial(id){if(!confirm('Delete?'))return;await api('DELETE',`/api/study-ai/${id}`);loadPrev()}
+
+const minD=new Date();minD.setDate(minD.getDate()+1);
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('syl-date').min=minD.toISOString().slice(0,10);
+  loadSubjs();loadPrev();
+});
+</script>
+<style>@media(max-width:700px){.sai-grid{grid-template-columns:1fr!important}}</style>
+{% endblock %}

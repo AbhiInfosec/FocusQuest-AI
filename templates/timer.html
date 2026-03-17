@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Study Timer{% endblock %}
+{% block page_title %}Study Timer{% endblock %}
+{% block content %}
+<div style="max-width:500px;margin:0 auto">
+  <div class="card mb16 fb g12">
+    <div><div class="ts tm mb8" id="t-subj" style="font-weight:600">Loading...</div><div style="font-size:19px;font-weight:700" id="t-name">...</div></div>
+    <a href="/daily" class="btn btn-sm">← Back</a>
+  </div>
+  <div id="step-timer">
+    <div class="card mb16">
+      <div class="card-title">Step 1 — Study Timer</div>
+      <div class="ts tm mb16">Server-verified timer. Study for required time to unlock quiz. 🔒</div>
+      <div class="timer-ring-wrap" style="position:relative;width:200px;height:200px;margin:0 auto 20px">
+        <svg class="timer-svg" width="200" height="200" viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="85" fill="none" stroke="var(--bg3)" stroke-width="10"/>
+          <circle id="tring" cx="100" cy="100" r="85" fill="none" stroke="url(#tg)" stroke-width="10" stroke-linecap="round" stroke-dasharray="534" stroke-dashoffset="0" style="transition:stroke-dashoffset .5s linear"/>
+          <defs><linearGradient id="tg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="50%" stop-color="#3b82f6"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs>
+        </svg>
+        <div class="timer-text" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)">
+          <div class="timer-minutes" id="tdisp">--:--</div>
+          <div class="timer-sub" id="tsub">Press start</div>
+        </div>
+      </div>
+      <div class="fc g12 mb14">
+        <button class="btn btn-sm" onclick="resetTimer()">↺ Reset</button>
+        <button class="btn btn-primary btn-lg" id="tbtn" onclick="toggleTimer()">▶ Start</button>
+      </div>
+      <div class="ts tm" style="text-align:center" id="tprog"></div>
+      <div id="tunlock" class="hidden mt16" style="background:rgba(52,211,153,.1);border:1px solid var(--green);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:18px;margin-bottom:6px">✅ Timer complete!</div>
+        <div class="ts" style="color:var(--green)">Quiz unlocked — 2 questions to go!</div>
+      </div>
+    </div>
+  </div>
+  <div id="step-quiz" class="hidden">
+    <div class="card mb16">
+      <div class="card-title">Step 2 — Quick Quiz</div>
+      <div class="ts tm mb14">Answer 2 questions to verify your understanding!</div>
+      <div id="quiz-box"><div class="ts tm loading">Loading quiz...</div></div>
+    </div>
+  </div>
+  <div id="step-ref" class="hidden">
+    <div class="card mb16">
+      <div class="card-title">Step 3 — Reflection</div>
+      <div class="ts tm mb14">Write 2 lines about what you learned. This locks in the knowledge! 🧠</div>
+      <textarea class="form-input" id="reftext" rows="4" placeholder="What did you learn? What was challenging?..." style="resize:vertical"></textarea>
+      <div class="fb mt8"><span class="ts tm" id="refcount">0 / 2 lines</span><button class="btn btn-primary" onclick="completeTopic()">Complete +50 XP ⚡</button></div>
+    </div>
+  </div>
+  <div id="step-done" class="hidden">
+    <div class="card" style="text-align:center;padding:48px">
+      <div style="font-size:56px;margin-bottom:14px">🌌</div>
+      <div style="font-size:24px;font-weight:800;color:var(--green);margin-bottom:8px">Topic Complete!</div>
+      <div class="tm mb20">You earned <strong style="color:#a78bfa">+50 XP</strong>!</div>
+      <div class="fc g12" style="flex-wrap:wrap">
+        <a href="/daily" class="btn btn-primary">Back to Study Plan</a>
+        <a href="/games" class="btn btn-gold">Play Games 🎮</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const TID={{topic_id}};
+let interval=null,running=false,elapsed=0,required=0,quizData=[],qIdx=0,qScore=0,qTotal=0,answered=false;
+async function loadTopic(){
+  const d=await api('GET',`/api/topics/${TID}/status`);
+  document.getElementById('t-name').textContent=d.name;
+  document.getElementById('t-subj').textContent=d.subject_name||'';
+  document.getElementById('t-subj').style.color=d.subject_color||'#a78bfa';
+  required=d.required_minutes*60;
+  if(d.completed){showStep('done');return}
+  if(d.timer_started_at){elapsed=Math.floor(d.elapsed_minutes*60);if(d.unlocked){updateDisp(0);showUnlock()}else{updateDisp(required-elapsed);startTick()}}
+  else updateDisp(required);
+}
+function toggleTimer(){if(running){clearInterval(interval);running=false;document.getElementById('tbtn').textContent='▶ Resume'}else{if(elapsed===0)api('POST',`/api/topics/${TID}/start`);startTick()}}
+function startTick(){running=true;document.getElementById('tbtn').textContent='⏸ Pause';interval=setInterval(()=>{elapsed++;const rem=Math.max(0,required-elapsed);updateDisp(rem);if(rem<=0){clearInterval(interval);running=false;showUnlock()}},1000)}
+function resetTimer(){clearInterval(interval);running=false;elapsed=0;updateDisp(required);document.getElementById('tbtn').textContent='▶ Start';document.getElementById('tunlock').classList.add('hidden')}
+function updateDisp(rem){const m=Math.floor(rem/60),s=rem%60;document.getElementById('tdisp').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');document.getElementById('tsub').textContent=rem>0?`${Math.floor(rem/60)}m left`:'Complete!';document.getElementById('tring').style.strokeDashoffset=534*(rem/required);const e=required-rem;if(e>0)document.getElementById('tprog').textContent=`${Math.floor(e/60)} of ${Math.floor(required/60)} min studied`}
+function showUnlock(){document.getElementById('tunlock').classList.remove('hidden');document.getElementById('tbtn').textContent='✓ Done';document.getElementById('tbtn').disabled=true;showXP(10);setTimeout(()=>{showStep('quiz');loadQuiz()},1800)}
+async function loadQuiz(){const d=await api('GET',`/api/topics/${TID}/status`);const q=await api('POST','/api/quiz/generate',{topic_name:d.name||'',subject_name:d.subject_name||''});quizData=q.questions;qTotal=quizData.length;qIdx=0;qScore=0;renderQ()}
+function renderQ(){if(qIdx>=quizData.length){submitQuiz();return}const q=quizData[qIdx];answered=false;document.getElementById('quiz-box').innerHTML=`<div><div class="ts tm mb8">Q${qIdx+1} of ${qTotal}</div><div style="font-size:15px;font-weight:600;margin-bottom:14px;line-height:1.5">${q.question}</div>${q.options.map((o,i)=>`<button class="quiz-option" onclick="ansQ(${i},${q.correct_index})" id="o${i}">${String.fromCharCode(65+i)}. ${o}</button>`).join('')}</div>`}
+function ansQ(chosen,correct){if(answered)return;answered=true;document.querySelectorAll('.quiz-option').forEach(b=>b.disabled=true);document.getElementById(`o${chosen}`).classList.add(chosen===correct?'correct':'wrong');if(chosen!==correct)document.getElementById(`o${correct}`).classList.add('correct');if(chosen===correct)qScore++;setTimeout(()=>{qIdx++;renderQ()},900)}
+async function submitQuiz(){const r=await api('POST','/api/quiz/submit',{topic_id:TID,score:qScore,total:qTotal});document.getElementById('quiz-box').innerHTML=`<div style="text-align:center;padding:20px"><div style="font-size:40px;margin-bottom:10px">${r.passed?'🎉':'📖'}</div><div style="font-size:18px;font-weight:700;color:${r.passed?'var(--green)':'var(--gold)'}">${r.passed?'Quiz Passed!':'Keep studying!'}</div><div class="ts tm mt8">Score: ${qScore}/${qTotal}${r.passed?' · +30 XP':''}</div>${r.passed?'<div style="color:var(--green);font-size:13px;margin-top:8px">Moving to reflection...</div>':`<button class="btn btn-primary mt16" onclick="retake()">Retake Quiz</button>`}</div>`;if(r.passed){showXP(30);setTimeout(()=>showStep('ref'),1600)}if(r.new_badges?.length)r.new_badges.forEach(b=>showBadge(b))}
+function retake(){qIdx=0;qScore=0;renderQ()}
+document.getElementById('reftext').addEventListener('input',function(){const l=this.value.split('\n').filter(l=>l.trim().length>5).length;document.getElementById('refcount').textContent=`${l} / 2 lines`});
+async function completeTopic(){const text=document.getElementById('reftext').value;if(text.split('\n').filter(l=>l.trim().length>5).length<2)return alert('Write at least 2 lines!');const r=await api('POST',`/api/topics/${TID}/complete`);if(r.error)return alert(r.error);showXP(50);if(r.new_badges?.length)r.new_badges.forEach(b=>showBadge(b));showStep('done')}
+function showStep(n){['timer','quiz','ref','done'].forEach(s=>{const el=document.getElementById('step-'+s);if(el)el.classList[s===n?'remove':'add']('hidden')})}
+document.addEventListener('DOMContentLoaded',loadTopic);
+</script>
+{% endblock %}

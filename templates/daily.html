@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Daily Study{% endblock %}
+{% block page_title %}Daily Study{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start" class="daily-grid">
+  <div>
+    <div class="card mb16">
+      <div class="card-title">Add Subject</div>
+      <div class="form-group"><label class="form-label">Name</label><input class="form-input" id="sname" placeholder="Java, DSA, Maths..."></div>
+      <div class="form-group"><label class="form-label">Color</label><div class="flex g8" style="flex-wrap:wrap" id="cpick"></div></div>
+      <button class="btn btn-primary btn-block" onclick="addSubj()">+ Add Subject</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Add Topic</div>
+      <div class="form-group"><label class="form-label">Topic Name</label><input class="form-input" id="tname" placeholder="Binary Search, OOP..."></div>
+      <div class="form-group"><label class="form-label">Subject</label><select class="form-input" id="tsubj"><option value="">— Select —</option></select></div>
+      <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="tdate"></div>
+      <div class="form-group"><label class="form-label">Study Time</label>
+        <select class="form-input" id="tmins">
+          <option value="15">15 min</option><option value="20" selected>20 min</option>
+          <option value="25">25 min</option><option value="30">30 min</option>
+          <option value="45">45 min</option><option value="60">60 min</option>
+        </select>
+      </div>
+      <button class="btn btn-primary btn-block" onclick="addTopic()">+ Add Topic</button>
+    </div>
+  </div>
+  <div>
+    <div class="fb mb16">
+      <button class="btn btn-sm" onclick="changeDate(-1)">← Prev</button>
+      <div style="font-size:16px;font-weight:700" id="ddisp"></div>
+      <button class="btn btn-sm" onclick="changeDate(1)">Next →</button>
+    </div>
+    <div class="card mb16">
+      <div class="card-title">Your Subjects</div>
+      <div id="slist"><div class="ts tm">No subjects yet.</div></div>
+    </div>
+    <div class="card">
+      <div class="fb mb16">
+        <div class="card-title" style="margin-bottom:0">Topics — <span id="dlabel">Today</span></div>
+        <span class="ts tm">Drag to reorder</span>
+      </div>
+      <div id="tlist" class="ts tm loading">Loading...</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let selColor='#8b5cf6',curDate=new Date();
+const COLORS=['#8b5cf6','#3b82f6','#06b6d4','#34d399','#fbbf24','#f472b6','#f87171','#a78bfa'];
+function renderCP(){document.getElementById('cpick').innerHTML=COLORS.map(c=>`<div onclick="selColor='${c}';renderCP()" style="width:26px;height:26px;border-radius:50%;background:${c};cursor:pointer;border:2px solid ${c===selColor?'white':'transparent'};transition:all .15s"></div>`).join('')}
+function getDS(){const y=curDate.getFullYear(),m=String(curDate.getMonth()+1).padStart(2,'0'),d=String(curDate.getDate()).padStart(2,'0');return`${y}-${m}-${d}`}
+function changeDate(d){curDate.setDate(curDate.getDate()+d);updateDD();loadTopics()}
+function updateDD(){const t=new Date();t.setHours(0,0,0,0);const isT=curDate.toDateString()===t.toDateString();const lbl=isT?'Today':curDate.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short'});document.getElementById('ddisp').textContent=lbl;document.getElementById('dlabel').textContent=lbl;document.getElementById('tdate').value=getDS()}
+async function addSubj(){const name=document.getElementById('sname').value.trim();if(!name)return;await api('POST','/api/subjects',{name,color:selColor});document.getElementById('sname').value='';loadSubjs();loadSubjSel()}
+async function loadSubjs(){const ss=await api('GET','/api/subjects');const el=document.getElementById('slist');el.innerHTML=ss.length?ss.map(s=>`<div class="fb" style="padding:8px 0;border-bottom:1px solid var(--border)"><div class="flex g8" style="align-items:center"><div class="cdot" style="background:${s.color}"></div><span style="font-size:13px;font-weight:500">${s.name}</span></div><button class="btn btn-sm btn-danger" onclick="delSubj(${s.id})">✕</button></div>`).join(''):'<div class="ts tm">No subjects yet.</div>'}
+async function delSubj(id){await api('DELETE',`/api/subjects/${id}`);loadSubjs();loadSubjSel()}
+async function loadSubjSel(){const ss=await api('GET','/api/subjects');document.getElementById('tsubj').innerHTML='<option value="">— Select subject —</option>'+ss.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
+async function addTopic(){const name=document.getElementById('tname').value.trim(),sid=document.getElementById('tsubj').value,dt=document.getElementById('tdate').value,mins=document.getElementById('tmins').value;if(!name||!sid)return alert('Enter topic name and select subject');await api('POST','/api/topics',{name,subject_id:parseInt(sid),study_date:dt,required_minutes:parseInt(mins)});document.getElementById('tname').value='';loadTopics()}
+async function loadTopics(){
+  document.getElementById('tlist').innerHTML='<div class="ts tm loading">Loading...</div>';
+  const ts=await api('GET',`/api/topics?date=${getDS()}`);
+  const el=document.getElementById('tlist');
+  if(!ts.length){el.innerHTML='<div class="ts tm">No topics for this day. Add one!</div>';return}
+  el.innerHTML=ts.map(t=>`
+    <div class="topic-item ${t.completed?'completed':''}" id="ti-${t.id}" draggable="true" ondragstart="dragStart(event,${t.id})" ondragover="dragOver(event)" ondrop="dropTopic(event,${t.id})" onclick="${!t.completed?`location.href='/timer/${t.id}'`:''}" >
+      <span class="drag-handle" onclick="event.stopPropagation()">⠿</span>
+      <div class="topic-check ${t.completed?'done':''}">${t.completed?'✓':''}</div>
+      <div class="f1"><div class="topic-name">${t.name}</div><div class="topic-meta" style="color:${t.subject_color}">${t.subject_name} · ${t.required_minutes}min${t.quiz_passed?' · Quiz ✓':''}</div></div>
+      ${t.completed?'<span class="badge badge-g">Done</span>':t.timer_started_at?'<span class="badge badge-y">In Progress</span>':'<span class="badge badge-p">Start →</span>'}
+    </div>`).join('');
+  initDrag();
+}
+
+// Drag & Drop
+let dragId=null;
+function dragStart(e,id){dragId=id;e.currentTarget.classList.add('dragging')}
+function dragOver(e){e.preventDefault()}
+async function dropTopic(e,targetId){
+  e.preventDefault();
+  if(dragId===targetId)return;
+  document.querySelectorAll('.topic-item').forEach(el=>el.classList.remove('dragging'));
+  const items=Array.from(document.querySelectorAll('.topic-item'));
+  const ids=items.map(el=>parseInt(el.id.replace('ti-','')));
+  const fromIdx=ids.indexOf(dragId),toIdx=ids.indexOf(targetId);
+  ids.splice(fromIdx,1);ids.splice(toIdx,0,dragId);
+  await api('POST','/api/topics/reorder',{order:ids});
+  loadTopics();
+}
+function initDrag(){document.querySelectorAll('.topic-item').forEach(el=>{el.addEventListener('dragend',()=>el.classList.remove('dragging'))})}
+document.addEventListener('DOMContentLoaded',()=>{renderCP();updateDD();loadSubjs();loadSubjSel();loadTopics()});
+</script>
+<style>@media(max-width:700px){.daily-grid{grid-template-columns:1fr!important}}</style>
+{% endblock %}

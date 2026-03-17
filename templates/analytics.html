@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Analytics{% endblock %}
+{% block page_title %}Analytics{% endblock %}
+{% block content %}
+<div id="aload" class="loading">Loading analytics...</div>
+<div id="acont" class="hidden">
+  <div class="card-grid">
+    <div class="stat-card" style="--sg:linear-gradient(135deg,#34d399,#06b6d4)"><div class="stat-label">Total Hours</div><div class="stat-value" id="a-hrs">0h</div><div class="stat-sub">all time</div></div>
+    <div class="stat-card" style="--sg:linear-gradient(135deg,#fbbf24,#f472b6)"><div class="stat-label">Streak</div><div class="stat-value" id="a-str">0</div><div class="stat-sub">days 🔥</div></div>
+    <div class="stat-card"><div class="stat-label">Topics Done</div><div class="stat-value" id="a-top">0</div><div class="stat-sub" id="a-topsub">of 0 total</div></div>
+    <div class="stat-card" style="--sg:linear-gradient(135deg,#f87171,#fbbf24)"><div class="stat-label">Quiz Score</div><div class="stat-value" id="a-quiz">—</div><div class="stat-sub" id="a-quizsub">no quizzes</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px" class="a2col">
+    <div class="card"><div class="card-title">This Week (hours)</div><canvas id="weekChart" height="120"></canvas><div class="ts tm mt8" id="wtotal"></div></div>
+    <div class="card"><div class="card-title">Monthly (hours)</div><canvas id="monthChart" height="120"></canvas></div>
+  </div>
+  <div class="card mb16"><div class="card-title">Subject Progress</div><div id="subj-a"><div class="ts tm">No subjects yet</div></div></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="a2col">
+    <div class="card"><div class="card-title">Level Progress</div><div id="lvl-prog"></div></div>
+    <div class="card"><div class="card-title">XP Breakdown</div><div id="xp-break"></div></div>
+  </div>
+</div>
+{% endblock %}
+{% block head %}<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>{% endblock %}
+{% block scripts %}
+<script>
+const LEVELS=[0,300,700,1200,2000,3200,5000,7500,11000,15000,20000];
+const LNAMES=['Beginner','Curious Explorer','Rising Student','Consistent Learner','Focused Scholar','Knowledge Seeker','Advanced Learner','Expert Studier','Elite Scholar','Grandmaster','Discipline Master'];
+const chartOpts=(label,color)=>({type:'bar',options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(139,92,246,.08)'},ticks:{color:'#4455aa',font:{size:10}}},y:{grid:{color:'rgba(139,92,246,.08)'},ticks:{color:'#4455aa',font:{size:10}}}}}});
+
+async function load(){
+  const d=await api('GET','/api/analytics');
+  document.getElementById('aload').classList.add('hidden');
+  document.getElementById('acont').classList.remove('hidden');
+  const s=d.stats;
+  document.getElementById('a-hrs').textContent=((s.total_minutes||0)/60).toFixed(1)+'h';
+  document.getElementById('a-str').textContent=s.streak||0;
+  document.getElementById('a-top').textContent=d.topic_stats.done||0;
+  document.getElementById('a-topsub').textContent=`of ${d.topic_stats.total||0} total`;
+  const qs=d.quiz_stats;
+  if(qs.total>0){document.getElementById('a-quiz').textContent=(qs.avg||0)+'%';document.getElementById('a-quizsub').textContent=`${qs.passed}/${qs.total} passed`}
+
+  // Weekly Chart.js
+  const DAYS=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const wLabels=d.weekly.map(w=>DAYS[new Date(w.date+'T00:00:00').getDay()]);
+  const wData=d.weekly.map(w=>w.hours);
+  const wTotal=wData.reduce((a,b)=>a+b,0);
+  document.getElementById('wtotal').textContent=`This week: ${wTotal.toFixed(1)}h`;
+  new Chart(document.getElementById('weekChart'),{type:'bar',data:{labels:wLabels,datasets:[{data:wData,backgroundColor:d.weekly.map((w,i)=>i===6?'rgba(139,92,246,.8)':'rgba(59,130,246,.5)'),borderRadius:4,borderSkipped:false}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(139,92,246,.06)'},ticks:{color:'#4455aa',font:{size:10}}},y:{grid:{color:'rgba(139,92,246,.06)'},ticks:{color:'#4455aa',font:{size:10}}}}}});
+
+  // Monthly Chart.js
+  new Chart(document.getElementById('monthChart'),{type:'bar',data:{labels:d.monthly.map(m=>m.week),datasets:[{data:d.monthly.map(m=>m.hours),backgroundColor:'rgba(244,114,182,.5)',borderRadius:4,borderSkipped:false}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(139,92,246,.06)'},ticks:{color:'#4455aa',font:{size:10}}},y:{grid:{color:'rgba(139,92,246,.06)'},ticks:{color:'#4455aa',font:{size:10}}}}}});
+
+  // Subject progress
+  if(d.subjects.length){document.getElementById('subj-a').innerHTML=d.subjects.map(s=>{const pct=s.total_topics>0?Math.round((s.done_topics/s.total_topics)*100):0;return`<div class="prog-row"><div class="cdot" style="background:${s.color}"></div><div class="prog-label">${s.name}</div><div class="prog-bg"><div class="prog-fill" style="width:${pct}%;background:${s.color}"></div></div><div class="prog-pct">${pct}%</div></div>`}).join('')}
+
+  // Level
+  const xp=s.xp||0;const lvl=LEVELS.findIndex((t,i)=>xp<(LEVELS[i+1]||99999)&&xp>=t)+1||1;
+  document.getElementById('lvl-prog').innerHTML=`<div style="display:flex;gap:0;overflow-x:auto;padding-bottom:8px">${LEVELS.map((t,i)=>{const done=xp>=t;const curr=i+1===lvl;return`<div style="min-width:56px;text-align:center;flex:1"><div style="width:26px;height:26px;border-radius:50%;margin:0 auto 5px;background:${done?'var(--ge)':'var(--bg3)'};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${done?'#fff':'var(--text3)'}${curr?';box-shadow:0 0 0 2px #a78bfa':''}">${i+1}</div><div style="font-size:8px;color:${curr?'#a78bfa':done?'var(--text1)':'var(--text3)'}">${LNAMES[i].split(' ')[0]}</div></div>`}).join('')}</div><div class="ts tm mt8">Current: <strong style="color:#a78bfa">${LNAMES[lvl-1]}</strong> · ${xp} XP</div>`;
+
+  // XP breakdown
+  const topicXP=(d.topic_stats.done||0)*50,quizXP=(qs.passed||0)*30,streakXP=Math.max(0,(s.xp||0)-topicXP-quizXP);
+  document.getElementById('xp-break').innerHTML=[['Topics (+50)',topicXP,'#a78bfa'],['Quizzes (+30)',quizXP,'var(--green)'],['Streaks (+20)',streakXP,'var(--gold)']].map(([l,v,c])=>`<div class="fb" style="padding:8px 0;border-bottom:1px solid var(--border)"><div class="ts">${l}</div><span class="badge" style="background:rgba(128,128,255,.1);color:${c};border:1px solid rgba(128,128,255,.2)">${v} XP</span></div>`).join('')+`<div class="fb mt8"><div style="font-weight:700;font-size:14px">Total</div><div style="font-family:var(--fm);font-weight:700;font-size:16px;color:#a78bfa">${s.xp||0} XP</div></div>`;
+}
+document.addEventListener('DOMContentLoaded',load);
+</script>
+<style>@media(max-width:600px){.a2col{grid-template-columns:1fr!important}}</style>
+{% endblock %}

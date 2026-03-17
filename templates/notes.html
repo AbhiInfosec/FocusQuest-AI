@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Notes{% endblock %}
+{% block page_title %}My Notes 📝{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start" class="notes-grid">
+  <div class="card">
+    <div class="card-title">Add Note</div>
+    <div class="form-group"><label class="form-label">Subject</label><select class="form-input" id="note-subj"><option value="">— Select —</option></select></div>
+    <div class="form-group"><label class="form-label">Title</label><input class="form-input" id="note-title" placeholder="Note title..."></div>
+    <div class="form-group"><label class="form-label">Content</label><textarea class="form-input" id="note-content" rows="7" placeholder="Write your notes..." style="resize:vertical"></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="addNote()">+ Save Note</button>
+  </div>
+  <div>
+    <div class="fb mb16" style="flex-wrap:wrap;gap:10px">
+      <div style="font-size:16px;font-weight:700">All Notes</div>
+      <select class="form-input" id="filter-subj" style="max-width:180px" onchange="loadNotes()"><option value="">All Subjects</option></select>
+    </div>
+    <div id="notes-list"><div class="ts tm loading">Loading notes...</div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadSubjs(){const ss=await api('GET','/api/subjects');const opts='<option value="">— Select —</option>'+ss.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');document.getElementById('note-subj').innerHTML=opts;document.getElementById('filter-subj').innerHTML='<option value="">All Subjects</option>'+ss.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
+async function addNote(){const title=document.getElementById('note-title').value.trim(),content=document.getElementById('note-content').value.trim(),sid=document.getElementById('note-subj').value;if(!title||!content||!sid)return alert('Fill all fields!');await api('POST','/api/notes',{title,content,subject_id:parseInt(sid)});document.getElementById('note-title').value='';document.getElementById('note-content').value='';loadNotes()}
+async function deleteNote(id){if(!confirm('Delete?'))return;await api('DELETE',`/api/notes/${id}`);loadNotes()}
+async function loadNotes(){const sid=document.getElementById('filter-subj').value;const notes=await api('GET',sid?`/api/notes?subject_id=${sid}`:'/api/notes');const el=document.getElementById('notes-list');if(!notes.length){el.innerHTML='<div class="ts tm">No notes yet. Add your first note!</div>';return}el.innerHTML=notes.map(n=>`<div class="card mb16"><div class="fb mb8"><div><div style="font-size:14px;font-weight:700">${n.title}</div><div class="ts tm mt8" style="color:${n.scolor}">${n.sname} · ${new Date(n.created_at).toLocaleDateString('en-IN')}</div></div><button class="btn btn-sm btn-danger" onclick="deleteNote(${n.id})">✕</button></div><div style="font-size:13px;color:var(--text1);line-height:1.7;white-space:pre-wrap;background:rgba(139,92,246,.04);border:1px solid var(--border);border-radius:8px;padding:12px">${n.content}</div></div>`).join('')}
+document.addEventListener('DOMContentLoaded',()=>{loadSubjs();loadNotes()});
+</script>
+<style>@media(max-width:700px){.notes-grid{grid-template-columns:1fr!important}}</style>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard{% endblock %}
+{% block page_title %}Leaderboard 🏆{% endblock %}
+{% block content %}
+<div class="fb mb20"><div><div style="font-size:20px;font-weight:700">Global Rankings</div><div class="ts tm">Top students on FocusQuest AI</div></div><span class="badge badge-y">🏆 Weekly Tournament Active</span></div>
+<div id="lbcont"><div class="ts tm loading">Loading leaderboard...</div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function load(){
+  const d=await api('GET','/api/leaderboard');
+  const t=await api('GET','/api/games/tournament');
+  if(t.week_start){document.querySelector('.badge-y').textContent=`🏆 Week ends ${t.week_end}`}
+  document.getElementById('lbcont').innerHTML=d.leaderboard.map((u,i)=>{
+    const rank=i+1,rc=rank===1?'gold':rank===2?'silver':rank===3?'bronze':'';
+    const icon=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
+    return`<div class="lb-row"><div class="lb-rank ${rc}">${icon}</div><div class="lb-avatar" style="background:${u.avatar_color||'var(--ge)'}">${u.name[0].toUpperCase()}</div><div class="f1"><div class="lb-name">${u.name}</div><div class="ts tm">Level ${u.level} · ${u.streak}🔥 · ${u.topics_done} topics</div></div><div class="lb-xp">${u.xp} XP</div></div>`;
+  }).join('');
+}
+document.addEventListener('DOMContentLoaded',load);
+</script>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Badges{% endblock %}
+{% block page_title %}Achievement Badges{% endblock %}
+{% block content %}
+<div class="fb mb20" style="flex-wrap:wrap;gap:12px">
+  <div><div style="font-size:20px;font-weight:700">Your Achievements 🏅</div><div class="ts tm">Earn badges by completing challenges</div></div>
+  <div class="badge badge-p" id="badge-count">Loading...</div>
+</div>
+<div class="badge-grid" id="bgrid"><div class="ts tm loading">Loading badges...</div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function load(){
+  const d=await api('GET','/api/badges');
+  document.getElementById('badge-count').textContent=`${d.earned_count} / ${d.total} earned`;
+  document.getElementById('bgrid').innerHTML=d.badges.map(b=>`<div class="badge-item ${b.earned?'earned':'locked'}"><span class="badge-icon">${b.icon}</span><div class="badge-name">${b.name}</div><div class="badge-desc">${b.desc}</div>${b.earned?'<div style="position:absolute;top:10px;right:10px;color:var(--green);font-size:13px">✓</div>':'<div style="position:absolute;top:10px;right:10px;color:var(--text3);font-size:12px">🔒</div>'}</div>`).join('');
+}
+document.addEventListener('DOMContentLoaded',load);
+</script>
+{% endblock %}

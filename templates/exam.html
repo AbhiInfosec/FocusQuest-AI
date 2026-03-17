@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Exam Mode{% endblock %}
+{% block page_title %}Exam Mode{% endblock %}
+{% block content %}
+<div style="display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start" class="exam-grid">
+  <div class="card">
+    <div class="card-title">Schedule New Exam</div>
+    <div class="form-group"><label class="form-label">Exam Name</label><input class="form-input" id="ename" placeholder="Java Final, DSA Midterm..."></div>
+    <div class="form-group"><label class="form-label">Subject (optional)</label><select class="form-input" id="esubj"><option value="">— Auto-detect from name —</option></select></div>
+    <div class="form-group"><label class="form-label">Exam Date</label><input type="date" class="form-input" id="edate"></div>
+    <button class="btn btn-primary btn-block" id="genbtn" onclick="genExam()">🤖 Generate AI Schedule</button>
+    <div class="ts tm mt8" style="text-align:center">AI creates day-by-day plan</div>
+  </div>
+  <div><div id="exams-list"><div class="ts tm loading">Loading exams...</div></div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function loadSubjSel(){const ss=await api('GET','/api/subjects');document.getElementById('esubj').innerHTML='<option value="">— Auto-detect —</option>'+ss.map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
+async function genExam(){
+  const name=document.getElementById('ename').value.trim(),ed=document.getElementById('edate').value,sid=document.getElementById('esubj').value||null;
+  if(!name||!ed)return alert('Enter exam name and date');
+  const btn=document.getElementById('genbtn');btn.textContent='🤖 Generating...';btn.disabled=true;
+  const d=await api('POST','/api/exams',{name,exam_date:ed,subject_id:sid?parseInt(sid):null});
+  btn.textContent='🤖 Generate AI Schedule';btn.disabled=false;
+  if(d.error)return alert(d.error);
+  document.getElementById('ename').value='';document.getElementById('edate').value='';
+  loadExams();
+}
+async function delExam(id){if(!confirm('Delete this exam?'))return;await api('DELETE',`/api/exams/${id}`);loadExams()}
+async function loadExams(){
+  const exams=await api('GET','/api/exams');
+  const el=document.getElementById('exams-list');
+  if(!exams.length){el.innerHTML=`<div class="card fc" style="flex-direction:column;gap:12px;padding:48px;text-align:center"><div style="font-size:42px">📋</div><div style="font-size:18px;font-weight:700">No exams scheduled</div><div class="ts tm">Add your first exam — AI will build your plan!</div></div>`;return}
+  el.innerHTML='';
+  for(const e of exams){
+    const days=daysUntil(e.exam_date);
+    const cls=days<=3?'badge-r':days<=7?'badge-y':'badge-g';
+    const dt=new Date(e.exam_date+'T00:00:00').toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'});
+    const div=document.createElement('div');div.className='exam-card';
+    div.innerHTML=`<div class="exam-header"><div><div class="exam-name">${e.name}</div><div class="ts tm mt8">${dt}</div></div><div class="flex g8" style="align-items:center"><span class="badge ${cls}">${days>0?days+'d left':'Today!'}</span><button class="btn btn-sm btn-danger" onclick="delExam(${e.id})">✕</button></div></div><div class="day-schedule" id="ds-${e.id}"><div class="ts tm loading">Loading schedule...</div></div>`;
+    el.appendChild(div);loadExamTopics(e.id);
+  }
+}
+async function loadExamTopics(eid){
+  const ts=await api('GET',`/api/exams/${eid}/topics`);
+  const el=document.getElementById(`ds-${eid}`);if(!el)return;
+  const today=new Date().toISOString().slice(0,10);
+  if(!ts.length){el.innerHTML=`<div class="day-card" style="min-width:160px"><div class="ts" style="color:#a78bfa;font-weight:600;margin-bottom:4px">Schedule Active</div><div class="ts tm">Topics in Daily Study</div><a href="/daily" style="font-size:11px;color:#a78bfa;display:inline-block;margin-top:4px">View →</a></div>`;return}
+  el.innerHTML=ts.map((t,i)=>`<div class="day-card ${t.study_date===today?'today':''}" onclick="location.href='/daily'"><div class="ts" style="color:${t.study_date===today?'#a78bfa':'var(--text2)'};font-weight:600">Day ${i+1}</div><div class="day-num">${new Date(t.study_date+'T00:00:00').getDate()}</div><div class="day-topic">${t.name}</div>${t.completed?'<div style="font-size:9px;color:var(--green);margin-top:3px">✓ Done</div>':''}</div>`).join('');
+}
+const minD=new Date();minD.setDate(minD.getDate()+1);
+document.addEventListener('DOMContentLoaded',()=>{document.getElementById('edate').min=minD.toISOString().slice(0,10);loadSubjSel();loadExams()});
+</script>
+<style>@media(max-width:700px){.exam-grid{grid-template-columns:1fr!important}}</style>
+{% endblock %}

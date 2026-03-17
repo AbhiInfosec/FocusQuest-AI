@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Sign In — FocusQuest AI{% endblock %}
+{% block body %}
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🌌</div>
+      <div class="auth-logo-text">FocusQuest AI</div>
+    </div>
+    <h1 class="auth-title">Welcome Back</h1>
+    <p class="auth-subtitle">Sign in to continue your quest</p>
+    <div class="auth-error" id="err"></div>
+    <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="email" type="email" placeholder="your@email.com"></div>
+    <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="pw" type="password" placeholder="••••••••"></div>
+    <button class="btn btn-primary btn-block btn-lg" id="btn" onclick="doLogin()">Sign In →</button>
+    <div class="auth-footer">No account? <a href="/register">Create one free</a></div>
+  </div>
+</div>
+<script>
+async function doLogin(){
+  const btn=document.getElementById('btn'),err=document.getElementById('err');
+  const email=document.getElementById('email').value.trim(),pw=document.getElementById('pw').value;
+  if(!email||!pw){err.textContent='Fill all fields';err.style.display='block';return}
+  btn.textContent='Signing in...';btn.disabled=true;err.style.display='none';
+  const d=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw})}).then(r=>r.json());
+  if(d.error){err.textContent=d.error;err.style.display='block';btn.textContent='Sign In →';btn.disabled=false}
+  else location.href='/dashboard';
+}
+document.addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+</script>
+{% endblock %}

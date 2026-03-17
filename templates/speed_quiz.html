@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Speed Quiz{% endblock %}
+{% block page_title %}Speed Quiz ⚡{% endblock %}
+{% block content %}
+<div style="max-width:500px;margin:0 auto">
+  <div id="sq-setup" class="card">
+    <div class="card-title">⚡ Speed Quiz</div>
+    <div class="ts tm mb16">Answer as many questions as possible in <strong style="color:#a78bfa">30 seconds</strong>! Each correct answer = +10 XP</div>
+    <div class="form-group"><label class="form-label">Topic</label><input class="form-input" id="sq-topic" placeholder="e.g. Java OOP, DSA, Web Dev..."></div>
+    <div class="form-group"><label class="form-label">Subject</label><input class="form-input" id="sq-subject" placeholder="e.g. Java, DSA..."></div>
+    <button class="btn btn-primary btn-block btn-lg" onclick="startSpeedQuiz()">⚡ Start Speed Quiz!</button>
+  </div>
+  <div id="sq-game" class="hidden">
+    <div class="card mb12">
+      <div class="fb mb8">
+        <div class="speed-timer" id="sq-timer">30</div>
+        <div style="text-align:right"><div style="font-size:24px;font-weight:800;color:var(--green)" id="sq-score">0</div><div class="ts tm">correct</div></div>
+      </div>
+      <div class="speed-progress"><div class="speed-progress-fill" id="sq-prog" style="width:100%"></div></div>
+    </div>
+    <div class="card">
+      <div class="ts tm mb8" id="sq-qnum">Q1</div>
+      <div style="font-size:16px;font-weight:600;margin-bottom:16px;line-height:1.5" id="sq-q"></div>
+      <div id="sq-opts"></div>
+    </div>
+  </div>
+  <div id="sq-result" class="hidden card" style="text-align:center;padding:48px">
+    <div style="font-size:52px;margin-bottom:14px" id="sq-emoji">🎯</div>
+    <div style="font-size:24px;font-weight:800;margin-bottom:8px" id="sq-result-title"></div>
+    <div class="ts tm mb8" id="sq-result-score"></div>
+    <div style="font-size:14px;color:#a78bfa;font-weight:600;margin-bottom:20px" id="sq-xp-earned"></div>
+    <div class="flex g12 fc"><button class="btn btn-primary" onclick="location.reload()">Play Again</button><a href="/games" class="btn">Back to Games</a></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let timer=30,interval=null,score=0,total=0,questions=[],qIdx=0,answered=false,startTime=Date.now();
+async function startSpeedQuiz(){
+  const topic=document.getElementById('sq-topic').value.trim()||'General',subject=document.getElementById('sq-subject').value.trim()||'Study';
+  document.getElementById('sq-setup').classList.add('hidden');
+  document.getElementById('sq-game').classList.remove('hidden');
+  const d=await api('POST','/api/quiz/generate',{topic_name:topic,subject_name:subject,count:20});
+  questions=d.questions||[];
+  if(!questions.length){document.getElementById('sq-game').classList.add('hidden');document.getElementById('sq-result').classList.remove('hidden');return}
+  qIdx=0;score=0;total=0;answered=false;startTime=Date.now();
+  renderSQ();startTimer();
+}
+function startTimer(){interval=setInterval(()=>{timer--;document.getElementById('sq-timer').textContent=timer;document.getElementById('sq-prog').style.width=(timer/30*100)+'%';if(timer<=10)document.getElementById('sq-timer').classList.add('urgent');if(timer<=0){clearInterval(interval);endGame()}},1000)}
+function renderSQ(){if(qIdx>=questions.length){qIdx=0}const q=questions[qIdx];answered=false;document.getElementById('sq-qnum').textContent=`Q${total+1} · ${timer}s left`;document.getElementById('sq-q').textContent=q.question;document.getElementById('sq-opts').innerHTML=q.options.map((o,i)=>`<button class="quiz-option" onclick="answerSQ(${i},${q.correct_index})" id="sqo${i}">${String.fromCharCode(65+i)}. ${o}</button>`).join('')}
+function answerSQ(chosen,correct){if(answered)return;answered=true;total++;document.querySelectorAll('.quiz-option').forEach(b=>b.disabled=true);document.getElementById(`sqo${chosen}`).classList.add(chosen===correct?'correct':'wrong');if(chosen===correct){score++;document.getElementById('sq-score').textContent=score}setTimeout(()=>{if(timer>0){qIdx++;renderSQ()}},400)}
+async function endGame(){
+  clearInterval(interval);
+  document.getElementById('sq-game').classList.add('hidden');
+  document.getElementById('sq-result').classList.remove('hidden');
+  const xp=score*10;
+  const r=await api('POST','/api/games/speed-quiz',{score,total,time_taken:30-timer});
+  const emojis=['😢','😐','😊','😄','🤩','🔥'];const emoji=emojis[Math.min(Math.floor(score/2),5)];
+  document.getElementById('sq-emoji').textContent=emoji;
+  document.getElementById('sq-result-title').textContent=score>=8?'Amazing!':score>=5?'Great Job!':score>=3?'Good Try!':'Keep Practicing!';
+  document.getElementById('sq-result-score').textContent=`${score} correct out of ${total} attempts`;
+  document.getElementById('sq-xp-earned').textContent=`+${xp} XP Earned!`;
+  showXP(xp);
+}
+</script>
+{% endblock %}
