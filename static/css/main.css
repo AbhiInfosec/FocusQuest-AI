@@ -38,10 +38,6 @@
   --ease:.16s cubic-bezier(.4,0,.2,1);
 }
 
-  --r:10px;--rl:14px;--rxl:20px;--sw:252px;--th:62px;
-  --ease:.16s cubic-bezier(.4,0,.2,1);
-}
-
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:14px;-webkit-font-smoothing:antialiased}
 body{font-family:var(--ff);background:var(--bg);color:var(--t0);min-height:100vh;overflow-x:hidden}
