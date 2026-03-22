@@ -17,7 +17,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH  = os.path.join(BASE_DIR, 'instance', 'focusquest.db')
 
 # ── Groq AI Setup ──────────────────────────────────────────────────────────────
-GROQ_KEY = os.environ.get('GROQ_API_KEY') or os.environ.get('GROQ_KEY') or ''
+GROQ_KEY = os.environ.get('GROQ_API_KEY', '')
 AI_OK = False
 groq_client = None
 
